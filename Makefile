@@ -7,7 +7,7 @@ BUILD_DIR := $(PROJECT_ROOT)/tmp/build_$(BUILD_SUFFIX)
 SO_FILE := $(BUILD_DIR)/modules/ddtrace.so
 WALL_FLAGS := -Wall -Wextra
 EXTRA_CFLAGS :=
-CFLAGS := -O2 $(EXTRA_CFLAGS) $(WALL_FLAGS)
+CFLAGS := -g $(EXTRA_CFLAGS) $(WALL_FLAGS)
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 PHP_MAJOR_MINOR:=$(shell php -r 'echo PHP_MAJOR_VERSION . PHP_MINOR_VERSION;')
 

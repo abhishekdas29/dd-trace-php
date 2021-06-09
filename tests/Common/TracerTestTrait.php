@@ -16,6 +16,14 @@ use DDTrace\Transport\Http;
 use Exception;
 use PHPUnit\Framework\TestCase;
 
+if (PHP_VERSION_ID >= 80000) {
+    class FakeSpan extends Span
+    {
+        public $startTime;
+        public $duration;
+    }
+}
+
 trait TracerTestTrait
 {
     protected static $agentRequestDumperUrl = 'http://request-replayer';
@@ -256,9 +264,9 @@ trait TracerTestTrait
             $spans = [];
             foreach ($spansInTrace as $rawSpan) {
                 $spanContext = new SpanContext(
-                    $rawSpan['trace_id'],
-                    $rawSpan['span_id'],
-                    isset($rawSpan['parent_id']) ? $rawSpan['parent_id'] : null
+                    (string) $rawSpan['trace_id'],
+                    (string) $rawSpan['span_id'],
+                    isset($rawSpan['parent_id']) ? (string) $rawSpan['parent_id'] : null
                 );
 
                 if (empty($rawSpan['resource'])) {
@@ -266,27 +274,44 @@ trait TracerTestTrait
                     return;
                 }
 
-                $span = new Span(
-                    $rawSpan['name'],
-                    $spanContext,
-                    isset($rawSpan['service']) ? $rawSpan['service'] : null,
-                    $rawSpan['resource'],
-                    $rawSpan['start']
-                );
 
-                // We want to use reflection to set properties so that we do not fire
-                // potentials changes in setters.
-                $this->setRawPropertyFromArray($span, $rawSpan, 'operationName', 'name');
-                $this->setRawPropertyFromArray($span, $rawSpan, 'service');
-                $this->setRawPropertyFromArray($span, $rawSpan, 'resource');
-                $this->setRawPropertyFromArray($span, $rawSpan, 'startTime', 'start');
+                if (PHP_VERSION_ID < 80000) {
+                    $span = new Span(
+                        $rawSpan['name'],
+                        $spanContext,
+                        isset($rawSpan['service']) ? $rawSpan['service'] : null,
+                        $rawSpan['resource'],
+                        $rawSpan['start']
+                    );
+
+                    // We want to use reflection to set properties so that we do not fire
+                    // potentials changes in setters.
+                    $this->setRawPropertyFromArray($span, $rawSpan, 'operationName', 'name');
+                    $this->setRawPropertyFromArray($span, $rawSpan, 'service');
+                    $this->setRawPropertyFromArray($span, $rawSpan, 'resource');
+                    $this->setRawPropertyFromArray($span, $rawSpan, 'startTime', 'start');
+                    $this->setRawPropertyFromArray($span, $rawSpan, 'type');
+                    $this->setRawPropertyFromArray($span, $rawSpan, 'duration');
+                    $this->setRawPropertyFromArray($span, $rawSpan, 'tags', 'meta');
+                    $this->setRawPropertyFromArray($span, $rawSpan, 'metrics', 'metrics');
+                } else {
+
+                    $internalSpan = new \DDTrace\SpanData;
+                    $internalSpan->name = $rawSpan["name"];
+                    $internalSpan->service = isset($rawSpan['service']) ? $rawSpan['service'] : null;
+                    $internalSpan->resource = $rawSpan['resource'];
+                    if (isset($rawSpan['type'])) {
+                        $internalSpan->type = $rawSpan['type'];
+                    }
+                    $internalSpan->meta = isset($rawSpan['meta']) ? $rawSpan['meta'] : [];
+                    $internalSpan->metrics = isset($rawSpan['metrics']) ? $rawSpan['metrics'] : [];
+                    $span = new FakeSpan($internalSpan, $spanContext);
+                    $span->duration = $rawSpan["duration"] / 1000;
+                    $span->startTime = $rawSpan["start"] / 1000;
+                }
                 $this->setRawPropertyFromArray($span, $rawSpan, 'hasError', 'error', function ($value) {
                     return $value == 1 || $value == true;
                 });
-                $this->setRawPropertyFromArray($span, $rawSpan, 'type');
-                $this->setRawPropertyFromArray($span, $rawSpan, 'duration');
-                $this->setRawPropertyFromArray($span, $rawSpan, 'tags', 'meta');
-                $this->setRawPropertyFromArray($span, $rawSpan, 'metrics', 'metrics');
 
                 $spans[] = SpanEncoder::encode($span);
             }

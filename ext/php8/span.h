@@ -40,8 +40,11 @@ void ddtrace_free_span_stacks(void);
 void ddtrace_push_span(ddtrace_span_fci *span_fci);
 void ddtrace_open_span(ddtrace_span_fci *span_fci);
 ddtrace_span_fci *ddtrace_init_span();
+void ddtrace_push_root_span();
 void dd_trace_stop_span_time(ddtrace_span_t *span);
-void ddtrace_close_span(void);
+void ddtrace_close_userland_spans_until(ddtrace_span_fci *until);
+void ddtrace_close_span(ddtrace_span_fci *span_fci);
+void ddtrace_close_all_open_spans(void);
 void ddtrace_drop_top_open_span(void);
 void ddtrace_serialize_closed_spans(zval *serialized);
 
