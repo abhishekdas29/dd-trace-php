@@ -20,6 +20,10 @@
 ZEND_TSRMLS_CACHE_EXTERN()
 #endif
 
+#if PHP_VERSION_ID >= 80000
+#define TSRMLS_DC
+#endif
+
 /* Initializes the SAPI, modules, and request. */
 bool zai_sapi_spinup(void);
 /* Shuts down the request, modules, and SAPI. */
@@ -51,6 +55,9 @@ void zai_sapi_mshutdown(void);
  */
 bool zai_sapi_rinit(void);
 void zai_sapi_rshutdown(void);
+
+/* Called from sapi_module_struct.register_server_variables */
+extern void (*register_custom_server_variables)(zval *track_vars_server_array TSRMLS_DC);
 
 /* Appends an INI entry to the existing 'ini_entries'.
  *
